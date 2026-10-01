@@ -1,0 +1,17 @@
+# 渡OS (DuOS v1.0) 专属系统身份标识
+ro.build.display.id=DuOS-v1.0 (Ginkgo)
+ro.du.version=1.0.0
+ro.du.build.date=2026-10-01
+ro.product.brand=DuOS
+ro.product.manufacturer=Du
+ro.product.model=DuPhone Redmi Note 8
+ro.product.name=duos_ginkgo
+ro.product.device=ginkgo
+
+# 性能与轻量化优化配置
+persist.sys.timezone=Asia/Shanghai
+persist.sys.country=CN
+persist.sys.language=zh
+ro.config.low_ram=false
+dalvik.vm.heapgrowthlimit=256m
+dalvik.vm.heapsize=512m

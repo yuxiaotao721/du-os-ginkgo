@@ -1,0 +1,97 @@
+name: Build DuOS Ginkgo Installer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip curl wget tar
+
+      - name: Download SenseVoice Offline Model
+        run: |
+          MODEL_DIR="overlay/etc/duxie/bundled_model"
+          mkdir -p "$MODEL_DIR"
+          echo "Downloading SenseVoice model.int8.onnx (228MB)..."
+          curl -L -o "$MODEL_DIR/model.int8.onnx" \
+            "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.int8.onnx"
+          
+          echo "Checking downloaded model size:"
+          ls -lh "$MODEL_DIR/model.int8.onnx"
+
+      - name: Package Recovery Installer ZIP
+        run: |
+          BUILD_DIR="build_pkg"
+          rm -rf "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR/META-INF/com/google/android"
+          
+          # Copy META-INF
+          cp installer/META-INF/com/google/android/* "$BUILD_DIR/META-INF/com/google/android/"
+          chmod +x "$BUILD_DIR/META-INF/com/google/android/update-binary"
+          
+          # Copy Config & Overlay
+          cp -r config "$BUILD_DIR/"
+          cp -r overlay "$BUILD_DIR/"
+          
+          # Package ZIP
+          ZIP_NAME="DuOS-v1.0-Ginkgo-Core-Installer.zip"
+          cd "$BUILD_DIR"
+          zip -r9 "../$ZIP_NAME" META-INF config overlay
+          cd ..
+          
+          # Checksum
+          sha256sum "$ZIP_NAME" > "${ZIP_NAME}.sha256"
+          echo "Package created:"
+          ls -lh "$ZIP_NAME"
+          cat "${ZIP_NAME}.sha256"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DuOS-v1.0-Ginkgo-Core-Installer
+          path: |
+            DuOS-v1.0-Ginkgo-Core-Installer.zip
+            DuOS-v1.0-Ginkgo-Core-Installer.zip.sha256
+
+      - name: Create or Update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v1.0"
+          ZIP_NAME="DuOS-v1.0-Ginkgo-Core-Installer.zip"
+          
+          # Delete existing release/tag if exists to refresh
+          gh release delete "$TAG" --yes || true
+          git push --delete origin "$TAG" || true
+          
+          gh release create "$TAG" \
+            "$ZIP_NAME" \
+            "${ZIP_NAME}.sha256" \
+            --title "渡OS v1.0 (Redmi Note 8 / Ginkgo) 系统级固化安装包" \
+            --notes "### 渡OS (DuOS v1.0) 核心固化刷机包 (Recovery Flashable)
+- 适配机型: Redmi Note 8 (ginkgo / 6GB+64GB)
+- 系统底包: Android 16 (LineageOS 22 / AOSP)
+- 包含组件:
+  - 渡桌面 (DuZhuoMian) - 默认Launcher
+  - 渡步 (DuStep) - 底层一步手势
+  - 渡写 (DuXie) - 离线输入法
+  - SenseVoice - 228MB 纯端侧离线语音模型
+  - 渡口 (DuKou) - 开机常驻中继
+  - 渡札 (DuZha) - 本地闪念知识库
+  - 渡链 (DuLian) - 端侧检索节点
+- 特性:
+  - 自动清理原生 Launcher3、LatinIME、音乐等冗余 (Debloat)
+  - 注入 privapp-permissions-du.xml 特权白名单，开机免任何弹窗
+  - 注入 Dalvik 内存调优参数"

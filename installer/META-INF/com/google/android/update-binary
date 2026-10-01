@@ -1,0 +1,114 @@
+#!/sbin/sh
+################################################################################
+#  渡OS (DuOS v1.0) 系统级固化注入器 (Redmi Note 8 / ginkgo)
+#  目标：将渡系列核心以 /system/priv-app/ 特权形式固化入底层，剔除原生冗余
+################################################################################
+
+OUTFD=$2
+ZIPFILE=$3
+
+ui_print() {
+    if [ "$OUTFD" != "" ]; then
+        echo "ui_print $1" > /proc/self/fd/$OUTFD
+        echo "ui_print" > /proc/self/fd/$OUTFD
+    else
+        echo "$1"
+    fi
+}
+
+ui_print "================================================="
+ui_print "       渡OS (DuOS v1.0) 专属系统固化安装器        "
+ui_print "       机型: Redmi Note 8 (ginkgo / 6GB+64GB)    "
+ui_print "================================================="
+
+ui_print "[-] 正在挂载系统分区..."
+umount /system 2>/dev/null
+umount /system_root 2>/dev/null
+umount /product 2>/dev/null
+
+mount -o rw /system 2>/dev/null || mount -o rw /system_root 2>/dev/null
+mount -o rw /product 2>/dev/null
+mount -o rw /dev/block/bootdevice/by-name/system /system 2>/dev/null || mount -o rw /dev/block/bootdevice/by-name/system /system_root 2>/dev/null
+
+SYS_PATH=""
+if [ -d "/system/system" ]; then
+    SYS_PATH="/system/system"
+elif [ -d "/system_root/system" ]; then
+    SYS_PATH="/system_root/system"
+elif [ -d "/system/priv-app" ]; then
+    SYS_PATH="/system"
+else
+    SYS_PATH="/system_root"
+fi
+
+if [ ! -d "$SYS_PATH/priv-app" ]; then
+    ui_print "[!] 错误: 未能正确定位 /system/priv-app 目录，请在 Recovery 中手动勾选 Mount System！"
+    exit 1
+fi
+
+ui_print "[-] 系统定位成功: $SYS_PATH"
+
+# 1. 深度剔除原生垃圾组件 (Debloat)
+ui_print "[-] 正在剔除原生冗余组件 (瘦身极简化)..."
+rm -rf "$SYS_PATH/app/LatinIME"*
+rm -rf "$SYS_PATH/priv-app/Trebuchet"*
+rm -rf "$SYS_PATH/priv-app/Launcher3"*
+rm -rf "$SYS_PATH/app/Eleven"*
+rm -rf "$SYS_PATH/app/Gallery2"*
+rm -rf "$SYS_PATH/app/Jelly"*
+rm -rf "$SYS_PATH/product/priv-app/Trebuchet"* 2>/dev/null
+rm -rf "$SYS_PATH/product/app/LatinIME"* 2>/dev/null
+
+# 2. 注入渡OS系统特权组件
+ui_print "[-] 正在注入渡OS核心组件至 /system/priv-app/..."
+mkdir -p "$SYS_PATH/priv-app/DuZhuoMian"
+mkdir -p "$SYS_PATH/priv-app/DuStep"
+mkdir -p "$SYS_PATH/priv-app/DuXie"
+mkdir -p "$SYS_PATH/priv-app/DuZha"
+mkdir -p "$SYS_PATH/priv-app/DuKou"
+mkdir -p "$SYS_PATH/priv-app/DuLian"
+
+unzip -o "$ZIPFILE" -d /tmp/du_tmp/
+
+cp -f /tmp/du_tmp/overlay/priv-app/DuZhuoMian/* "$SYS_PATH/priv-app/DuZhuoMian/"
+cp -f /tmp/du_tmp/overlay/priv-app/DuStep/* "$SYS_PATH/priv-app/DuStep/"
+cp -f /tmp/du_tmp/overlay/priv-app/DuXie/* "$SYS_PATH/priv-app/DuXie/"
+cp -f /tmp/du_tmp/overlay/priv-app/DuZha/* "$SYS_PATH/priv-app/DuZha/"
+cp -f /tmp/du_tmp/overlay/priv-app/DuKou/* "$SYS_PATH/priv-app/DuKou/"
+cp -f /tmp/du_tmp/overlay/priv-app/DuLian/* "$SYS_PATH/priv-app/DuLian/"
+
+# 3. 部署 SenseVoice 离线语音模型
+ui_print "[-] 正在固化 SenseVoice 228MB 离线语音大模型..."
+mkdir -p "$SYS_PATH/etc/duxie/bundled_model"
+cp -f /tmp/du_tmp/overlay/etc/duxie/bundled_model/* "$SYS_PATH/etc/duxie/bundled_model/"
+
+# 4. 注入系统特权白名单 XML
+ui_print "[-] 正在配置系统特权免授权白名单..."
+mkdir -p "$SYS_PATH/etc/permissions"
+cp -f /tmp/du_tmp/config/privapp-permissions-du.xml "$SYS_PATH/etc/permissions/"
+
+# 5. 权限修复
+ui_print "[-] 正在修复系统文件权限 (0644 / 0755)..."
+chmod 755 "$SYS_PATH/priv-app/Du"*
+chmod 644 "$SYS_PATH/priv-app/DuZhuoMian/"*.apk
+chmod 644 "$SYS_PATH/priv-app/DuStep/"*.apk
+chmod 644 "$SYS_PATH/priv-app/DuXie/"*.apk
+chmod 644 "$SYS_PATH/priv-app/DuZha/"*.apk
+chmod 644 "$SYS_PATH/priv-app/DuKou/"*.apk
+chmod 644 "$SYS_PATH/priv-app/DuLian/"*.apk
+chmod 644 "$SYS_PATH/etc/permissions/privapp-permissions-du.xml"
+chmod -R 644 "$SYS_PATH/etc/duxie/bundled_model/"*
+
+# 6. 追加系统标识到 build.prop
+ui_print "[-] 正在注入渡OS系统品牌标识..."
+if [ -f "$SYS_PATH/build.prop" ]; then
+    cat /tmp/du_tmp/config/build.prop.append >> "$SYS_PATH/build.prop"
+fi
+
+rm -rf /tmp/du_tmp
+
+ui_print "================================================="
+ui_print "       渡OS (DuOS v1.0) 固化注入完成！           "
+ui_print "       重启手机即可享受纯净自研系统！            "
+ui_print "================================================="
+exit 0
