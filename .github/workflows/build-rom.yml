@@ -2,8 +2,10 @@ name: Build DuOS Ginkgo Installer
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch: {}
+    branches:
+      - main
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -78,22 +80,22 @@ jobs:
           
           # Create release notes file
           cat << 'EOF' > release_notes.md
-### 渡OS (DuOS v1.0) 核心固化刷机包 (Recovery Flashable)
-- 适配机型: Redmi Note 8 (ginkgo / 6GB+64GB)
-- 系统底包: Android 16 (LineageOS 22 / AOSP)
-- 包含组件:
-  - 渡桌面 (DuZhuoMian) - 默认Launcher
-  - 渡步 (DuStep) - 底层一步手势
-  - 渡写 (DuXie) - 离线输入法
-  - SenseVoice - 228MB 纯端侧离线语音模型
-  - 渡口 (DuKou) - 开机常驻中继
-  - 渡札 (DuZha) - 本地闪念知识库
-  - 渡链 (DuLian) - 端侧检索节点
-- 特性:
-  - 自动清理原生 Launcher3、LatinIME、音乐等冗余 (Debloat)
-  - 注入 privapp-permissions-du.xml 特权白名单，开机免任何弹窗
-  - 注入 Dalvik 内存调优参数
-EOF
+          ### 渡OS (DuOS v1.0) 核心固化刷机包 (Recovery Flashable)
+          - 适配机型: Redmi Note 8 (ginkgo / 6GB+64GB)
+          - 系统底包: Android 16 (LineageOS 22 / AOSP)
+          - 包含组件:
+            - 渡桌面 (DuZhuoMian) - 默认Launcher
+            - 渡步 (DuStep) - 底层一步手势
+            - 渡写 (DuXie) - 离线输入法
+            - SenseVoice - 228MB 纯端侧离线语音模型
+            - 渡口 (DuKou) - 开机常驻中继
+            - 渡札 (DuZha) - 本地闪念知识库
+            - 渡链 (DuLian) - 端侧检索节点
+          - 特性:
+            - 自动清理原生 Launcher3、LatinIME、音乐等冗余 (Debloat)
+            - 注入 privapp-permissions-du.xml 特权白名单，开机免任何弹窗
+            - 注入 Dalvik 内存调优参数
+          EOF
 
           gh release create "$TAG" \
             "$ZIP_NAME" \
