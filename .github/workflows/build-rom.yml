@@ -76,11 +76,9 @@ jobs:
           gh release delete "$TAG" --yes || true
           git push --delete origin "$TAG" || true
           
-          gh release create "$TAG" \
-            "$ZIP_NAME" \
-            "${ZIP_NAME}.sha256" \
-            --title "渡OS v1.0 (Redmi Note 8 / Ginkgo) 系统级固化安装包" \
-            --notes "### 渡OS (DuOS v1.0) 核心固化刷机包 (Recovery Flashable)
+          # Create release notes file
+          cat << 'EOF' > release_notes.md
+### 渡OS (DuOS v1.0) 核心固化刷机包 (Recovery Flashable)
 - 适配机型: Redmi Note 8 (ginkgo / 6GB+64GB)
 - 系统底包: Android 16 (LineageOS 22 / AOSP)
 - 包含组件:
@@ -94,4 +92,11 @@ jobs:
 - 特性:
   - 自动清理原生 Launcher3、LatinIME、音乐等冗余 (Debloat)
   - 注入 privapp-permissions-du.xml 特权白名单，开机免任何弹窗
-  - 注入 Dalvik 内存调优参数"
+  - 注入 Dalvik 内存调优参数
+EOF
+
+          gh release create "$TAG" \
+            "$ZIP_NAME" \
+            "${ZIP_NAME}.sha256" \
+            --title "渡OS v1.0 (Redmi Note 8 / Ginkgo) 系统级固化安装包" \
+            --notes-file release_notes.md
